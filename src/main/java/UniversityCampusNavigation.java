@@ -7,7 +7,6 @@ import java.io.*;
 import java.util.*;
 import java.util.List;
 import java.util.Properties;
-import java.util.Scanner;
 
 class RoundBorder implements Border {
     private int radius;
@@ -227,6 +226,9 @@ class MapPanel extends JPanel {
     private double scale = 1.0;
     private double translateX = 0;
     private double translateY = 0;
+    private String buildingShapeType; // "rectangle" или "circle"
+    private Point tempCircleCenter; // Центр временной окружности
+    private int tempCircleRadius; // Радиус временной окружности
 
     public MapPanel(CampusMap map) {
         this.map = map;
@@ -243,6 +245,10 @@ class MapPanel extends JPanel {
                 Point scaledPoint = getScaledPoint(evt.getPoint());
                 if (drawingBuilding) {
                     startPoint = scaledPoint;
+                    if (buildingShapeType.equals("circle")) {
+                        tempCircleCenter = scaledPoint;
+                        tempCircleRadius = 0;
+                    }
                 } else if (editingBuilding) {
                     draggingVertexIndex = findVertexAt(scaledPoint.x, scaledPoint.y);
                 } else if (drawingRoad && roadStartNode == null) {
@@ -261,18 +267,24 @@ class MapPanel extends JPanel {
                 if (!isEditMode) return;
                 Point scaledPoint = getScaledPoint(evt.getPoint());
                 if (drawingBuilding && startPoint != null) {
-                    int x1 = Math.min(startPoint.x, scaledPoint.x);
-                    int y1 = Math.min(startPoint.y, scaledPoint.y);
-                    int x2 = Math.max(startPoint.x, scaledPoint.x);
-                    int y2 = Math.max(startPoint.y, scaledPoint.y);
-                    tempPolygon = new Polygon();
-                    tempPolygon.addPoint(x1, y1);
-                    tempPolygon.addPoint(x2, y1);
-                    tempPolygon.addPoint(x2, y2);
-                    tempPolygon.addPoint(x1, y2);
+                    if (buildingShapeType.equals("rectangle")) {
+                        int x1 = Math.min(startPoint.x, scaledPoint.x);
+                        int y1 = Math.min(startPoint.y, scaledPoint.y);
+                        int x2 = Math.max(startPoint.x, scaledPoint.x);
+                        int y2 = Math.max(startPoint.y, scaledPoint.y);
+                        tempPolygon = new Polygon();
+                        tempPolygon.addPoint(x1, y1);
+                        tempPolygon.addPoint(x2, y1);
+                        tempPolygon.addPoint(x2, y2);
+                        tempPolygon.addPoint(x1, y2);
+                    } else if (buildingShapeType.equals("circle")) {
+                        tempCircleRadius = (int) Math.sqrt(Math.pow(scaledPoint.x - tempCircleCenter.x, 2) + Math.pow(scaledPoint.y - tempCircleCenter.y, 2));
+                        tempPolygon = approximateCircle(tempCircleCenter, tempCircleRadius);
+                    }
                     drawingBuilding = false;
                     editingBuilding = true;
                     startPoint = null;
+                    updateCancelButtonVisibility();
                     repaint();
                 }
                 draggingVertexIndex = -1;
@@ -283,6 +295,9 @@ class MapPanel extends JPanel {
                 if (!isEditMode) return;
                 Point scaledPoint = getScaledPoint(evt.getPoint());
                 if (drawingBuilding && startPoint != null) {
+                    if (buildingShapeType.equals("circle")) {
+                        tempCircleRadius = (int) Math.sqrt(Math.pow(scaledPoint.x - tempCircleCenter.x, 2) + Math.pow(scaledPoint.y - tempCircleCenter.y, 2));
+                    }
                     repaint();
                 } else if (editingBuilding && draggingVertexIndex >= 0) {
                     tempPolygon.xpoints[draggingVertexIndex] = scaledPoint.x;
@@ -373,6 +388,7 @@ class MapPanel extends JPanel {
                     UniversityCampusNavigation frame = (UniversityCampusNavigation) SwingUtilities.getWindowAncestor(MapPanel.this);
                     if (frame != null) {
                         frame.deleteButton.setEnabled(selectedObject != null);
+                        frame.updateCancelButtonVisibility();
                     }
                     repaint();
                 }
@@ -416,21 +432,25 @@ class MapPanel extends JPanel {
         return new Point((int) x, (int) y);
     }
 
-    private void resetModes() {
+    public void resetModes() {
         drawingBuilding = false;
         editingBuilding = false;
         selectingConnectionPoint = false;
         drawingRoad = false;
         tempPolygon = new Polygon();
+        tempCircleCenter = null;
+        tempCircleRadius = 0;
         tempRoadPoints = new ArrayList<>();
         roadStartNode = null;
         startPoint = null;
         currentBuildingName = null;
+        buildingShapeType = null;
         clearSelection();
         UniversityCampusNavigation frame = (UniversityCampusNavigation) SwingUtilities.getWindowAncestor(this);
         if (frame != null) {
             frame.addBuildingButton.setBackground(new Color(255, 255, 255));
             frame.addRoadButton.setBackground(new Color(255, 255, 255));
+            frame.updateCancelButtonVisibility();
         }
         repaint();
     }
@@ -438,7 +458,7 @@ class MapPanel extends JPanel {
     private Node findBuildingAt(Point p) {
         for (Node node : map.getNodes().values()) {
             if (node.isBuilding()) {
-                if (node.shape.contains(p) || isPointOnPolygonContour(node.shape, p)) {
+                if (node.shape.contains(p) || isPointOnPolygonContour(node.shape,p)) {
                     return node;
                 }
             }
@@ -532,13 +552,27 @@ class MapPanel extends JPanel {
         return Math.sqrt((x - projectionX) * (x - projectionX) + (y - projectionY) * (y - projectionY));
     }
 
-    public void startDrawingBuilding(String name) {
+    private Polygon approximateCircle(Point center, int radius) {
+        Polygon circle = new Polygon();
+        int numPoints = 32; // Количество точек для аппроксимации окружности
+        for (int i = 0; i < numPoints; i++) {
+            double angle = 2 * Math.PI * i / numPoints;
+            int x = center.x + (int) (radius * Math.cos(angle));
+            int y = center.y + (int) (radius * Math.sin(angle));
+            circle.addPoint(x, y);
+        }
+        return circle;
+    }
+
+    public void startDrawingBuilding(String name, String shapeType) {
         resetModes();
         drawingBuilding = true;
         currentBuildingName = name;
+        buildingShapeType = shapeType;
         UniversityCampusNavigation frame = (UniversityCampusNavigation) SwingUtilities.getWindowAncestor(this);
         if (frame != null) {
             frame.addBuildingButton.setBackground(new Color(230, 230, 230));
+            frame.updateCancelButtonVisibility();
         }
         repaint();
     }
@@ -547,9 +581,10 @@ class MapPanel extends JPanel {
         if (editingBuilding) {
             selectingConnectionPoint = true;
             editingBuilding = false;
+            updateCancelButtonVisibility();
             repaint();
         } else {
-            JOptionPane.showMessageDialog(null, "Complete the rectangle first!");
+            JOptionPane.showMessageDialog(null, "Complete the shape first!");
         }
     }
 
@@ -563,6 +598,7 @@ class MapPanel extends JPanel {
         UniversityCampusNavigation frame = (UniversityCampusNavigation) SwingUtilities.getWindowAncestor(this);
         if (frame != null) {
             frame.addRoadButton.setBackground(new Color(230, 230, 230));
+            frame.updateCancelButtonVisibility();
         }
         repaint();
     }
@@ -589,7 +625,6 @@ class MapPanel extends JPanel {
         isEditMode = editMode;
         if (!isEditMode) {
             resetModes();
-            clearSelection();
         }
         repaint();
     }
@@ -613,6 +648,17 @@ class MapPanel extends JPanel {
         repaint();
     }
 
+    private void updateCancelButtonVisibility() {
+        UniversityCampusNavigation frame = (UniversityCampusNavigation) SwingUtilities.getWindowAncestor(this);
+        if (frame != null) {
+            frame.updateCancelButtonVisibility();
+        }
+    }
+
+    public boolean isInAddMode() {
+        return drawingBuilding || editingBuilding || selectingConnectionPoint || drawingRoad;
+    }
+
     @Override
     protected void paintComponent(Graphics g) {
         super.paintComponent(g);
@@ -623,7 +669,6 @@ class MapPanel extends JPanel {
         g2d.scale(scale, scale);
 
         // Отрисовка дорог
-        System.out.println("Drawing roads with color: 200, 200, 200"); // Отладка
         g2d.setColor(new Color(200, 200, 200)); // Серый, как на фото
         Set<String> drawnEdges = new HashSet<>();
         for (String from : map.getGraph().keySet()) {
@@ -634,12 +679,11 @@ class MapPanel extends JPanel {
                     Point fromPos = map.getNodes().get(from).position;
                     Point toPos = map.getNodes().get(to).position;
                     if (isEditMode && selectedObject instanceof Edge && selectedObject == neighbor.getValue()) {
-                        System.out.println("Highlighting edge: " + from + " to " + to); // Отладка
                         g2d.setColor(new Color(255, 165, 0)); // Оранжевый для выделения
-                        g2d.setStroke(new BasicStroke((float) (4 / scale)));
+                        g2d.setStroke(new BasicStroke((float) (6 / scale))); // Увеличим толщину для выделения
                     } else {
                         g2d.setColor(new Color(200, 200, 200));
-                        g2d.setStroke(new BasicStroke((float) (2 / scale))); // Толщина как на фото
+                        g2d.setStroke(new BasicStroke((float) (4 / scale))); // Увеличиваем толщину дорог
                     }
                     g2d.drawLine(fromPos.x, fromPos.y, toPos.x, toPos.y);
                     drawnEdges.add(edgeKey);
@@ -650,9 +694,8 @@ class MapPanel extends JPanel {
 
         // Отрисовка временной дороги
         if (isEditMode && drawingRoad && !tempRoadPoints.isEmpty()) {
-            System.out.println("Drawing temporary road"); // Отладка
             g2d.setColor(new Color(200, 200, 200)); // Светло-серый
-            g2d.setStroke(new BasicStroke((float) (2 / scale)));
+            g2d.setStroke(new BasicStroke((float) (4 / scale))); // Такая же толщина, как у дорог
             Path2D road = new Path2D.Double();
             road.moveTo(tempRoadPoints.get(0).x, tempRoadPoints.get(0).y);
             for (int i = 1; i < tempRoadPoints.size(); i++) {
@@ -664,7 +707,6 @@ class MapPanel extends JPanel {
 
         // Отрисовка пути
         if (!currentPath.isEmpty()) {
-            System.out.println("Drawing path with color: 66, 133, 244"); // Отладка
             g2d.setColor(new Color(66, 133, 244)); // Синий, как в Google Maps
             g2d.setStroke(new BasicStroke((float) (3 / scale)));
             for (int i = 0; i < currentPath.size() - 1; i++) {
@@ -687,7 +729,6 @@ class MapPanel extends JPanel {
                 g2d.setStroke(new BasicStroke((float) (1.5 / scale)));
                 g2d.drawPolygon(node.shape);
                 if (isEditMode && selectedObject == node) {
-                    System.out.println("Highlighting building: " + node.id); // Отладка
                     g2d.setColor(new Color(255, 165, 0)); // Оранжевый для выделения
                     g2d.setStroke(new BasicStroke((float) (4 / scale)));
                     g2d.drawPolygon(node.shape);
@@ -695,7 +736,6 @@ class MapPanel extends JPanel {
                     g2d.setStroke(new BasicStroke((float) (1 / scale)));
                 }
                 // Точка входа (Google Maps стиль)
-                System.out.println("Drawing entry point at: " + node.connectionPoint.x + ", " + node.connectionPoint.y); // Отладка
                 g2d.setColor(new Color(34, 139, 34)); // Зелёный круг
                 g2d.fillOval(node.connectionPoint.x - (int) (5 / scale), node.connectionPoint.y - (int) (5 / scale), (int) (10 / scale), (int) (10 / scale));
                 g2d.setColor(Color.WHITE); // Белая точка
@@ -707,10 +747,9 @@ class MapPanel extends JPanel {
                 g2d.drawString(node.id.substring(2), bounds.x + bounds.width + 5, bounds.y + bounds.height / 2);
             } else {
                 // Junction
-                g2d.setColor(new Color(220, 20, 60)); // Красный
+                g2d.setColor(new Color(180, 180, 180)); // Чуть темнее, чем дороги
                 g2d.fillOval(node.position.x - (int) (5 / scale), node.position.y - (int) (5 / scale), (int) (10 / scale), (int) (10 / scale));
                 if (isEditMode && selectedObject == node) {
-                    System.out.println("Highlighting junction: " + node.id); // Отладка
                     g2d.setColor(new Color(255, 165, 0)); // Оранжевый для выделения
                     g2d.setStroke(new BasicStroke((float) (4 / scale)));
                     g2d.drawOval(node.position.x - (int) (7 / scale), node.position.y - (int) (7 / scale), (int) (14 / scale), (int) (14 / scale));
@@ -721,23 +760,28 @@ class MapPanel extends JPanel {
 
         // Отрисовка временного здания
         if (isEditMode && drawingBuilding && startPoint != null) {
-            System.out.println("Drawing temporary building"); // Отладка
-            g2d.setColor(new Color(100, 149, 237, 180));
             Point mousePos = getScaledPoint(getMousePosition() != null ? getMousePosition() : startPoint);
-            int x = Math.min(startPoint.x, mousePos.x);
-            int y = Math.min(startPoint.y, mousePos.y);
-            int w = Math.abs(startPoint.x - mousePos.x);
-            int h = Math.abs(startPoint.y - mousePos.y);
-            g2d.fillRect(x, y, w, h);
-            g2d.setColor(new Color(25, 25, 112));
-            g2d.setStroke(new BasicStroke((float) (1.5 / scale)));
-            g2d.drawRect(x, y, w, h);
+            g2d.setColor(new Color(100, 149, 237, 180));
+            if (buildingShapeType.equals("rectangle")) {
+                int x = Math.min(startPoint.x, mousePos.x);
+                int y = Math.min(startPoint.y, mousePos.y);
+                int w = Math.abs(startPoint.x - mousePos.x);
+                int h = Math.abs(startPoint.y - mousePos.y);
+                g2d.fillRect(x, y, w, h);
+                g2d.setColor(new Color(25, 25, 112));
+                g2d.setStroke(new BasicStroke((float) (1.5 / scale)));
+                g2d.drawRect(x, y, w, h);
+            } else if (buildingShapeType.equals("circle")) {
+                g2d.fillOval(tempCircleCenter.x - tempCircleRadius, tempCircleCenter.y - tempCircleRadius, 2 * tempCircleRadius, 2 * tempCircleRadius);
+                g2d.setColor(new Color(25, 25, 112));
+                g2d.setStroke(new BasicStroke((float) (1.5 / scale)));
+                g2d.drawOval(tempCircleCenter.x - tempCircleRadius, tempCircleCenter.y - tempCircleRadius, 2 * tempCircleRadius, 2 * tempCircleRadius);
+            }
             g2d.setStroke(new BasicStroke((float) (1 / scale)));
         }
 
         // Отрисовка редактируемого здания
         if (isEditMode && (editingBuilding || selectingConnectionPoint) && tempPolygon.npoints > 0) {
-            System.out.println("Drawing editable building"); // Отладка
             g2d.setColor(new Color(100, 149, 237, 180));
             g2d.fillPolygon(tempPolygon);
             g2d.setColor(new Color(25, 25, 112));
@@ -745,7 +789,7 @@ class MapPanel extends JPanel {
             g2d.drawPolygon(tempPolygon);
             g2d.setStroke(new BasicStroke((float) (1 / scale)));
             if (editingBuilding) {
-                g2d.setColor(new Color(220, 20, 60));
+                g2d.setColor(new Color(180, 180, 180)); // Точки для редактирования
                 for (int i = 0; i < tempPolygon.npoints; i++) {
                     g2d.fillOval(tempPolygon.xpoints[i] - (int) (5 / scale), tempPolygon.ypoints[i] - (int) (5 / scale), (int) (10 / scale), (int) (10 / scale));
                 }
@@ -780,6 +824,7 @@ class UniversityCampusNavigation extends JFrame {
     private JButton findPathButton;
     private JLayeredPane layeredPane;
     private JButton resetZoomButton;
+    private JButton cancelButton;
     private final boolean navigationOnly;
     private final File mapDirectory;
 
@@ -815,8 +860,9 @@ class UniversityCampusNavigation extends JFrame {
         resetZoomButton.setPreferredSize(new Dimension(30, 30));
         resetZoomButton.setSize(30, 30);
         resetZoomButton.setVisible(false);
+        resetZoomButton.setToolTipText("Reset Zoom to Default (1:1)");
         styleButton(resetZoomButton, false);
-        resetZoomButton.addActionListener(event -> {
+        resetZoomButton.addActionListener(evt -> {
             System.out.println("Reset Zoom button clicked");
             mapPanel.resetZoom();
         });
@@ -861,11 +907,10 @@ class UniversityCampusNavigation extends JFrame {
         addBuildingButton.setAlignmentX(Component.CENTER_ALIGNMENT);
         addBuildingButton.setMaximumSize(new Dimension(130, 30));
         styleButton(addBuildingButton, false);
-        addBuildingButton.addActionListener(e -> {
+        addBuildingButton.addActionListener(evt -> {
             String name = JOptionPane.showInputDialog(this, "Enter building name:");
             if (name != null && !name.trim().isEmpty()) {
-                mapPanel.startDrawingBuilding(name);
-                JOptionPane.showMessageDialog(this, "Click and drag to draw a rectangle. Then edit vertices or double-click to add points. Press 'Finish Drawing' when done.");
+                showShapeSelectionDialog(name);
             }
         });
 
@@ -873,7 +918,7 @@ class UniversityCampusNavigation extends JFrame {
         finishBuildingButton.setAlignmentX(Component.CENTER_ALIGNMENT);
         finishBuildingButton.setMaximumSize(new Dimension(130, 30));
         styleButton(finishBuildingButton, false);
-        finishBuildingButton.addActionListener(e -> {
+        finishBuildingButton.addActionListener(evt -> {
             mapPanel.finishDrawingBuilding();
             if (mapPanel.isSelectingConnectionPoint()) {
                 JOptionPane.showMessageDialog(this, "Click on the building contour to set the entry point.");
@@ -885,7 +930,7 @@ class UniversityCampusNavigation extends JFrame {
         addRoadButton.setAlignmentX(Component.CENTER_ALIGNMENT);
         addRoadButton.setMaximumSize(new Dimension(130, 30));
         styleButton(addRoadButton, false);
-        addRoadButton.addActionListener(e -> {
+        addRoadButton.addActionListener(evt -> {
             mapPanel.startDrawingRoad();
             JOptionPane.showMessageDialog(this, "Click on a building entry point or junction to start. Click to add points, double-click to finish.");
         });
@@ -894,7 +939,7 @@ class UniversityCampusNavigation extends JFrame {
         clearMapButton.setAlignmentX(Component.CENTER_ALIGNMENT);
         clearMapButton.setMaximumSize(new Dimension(130, 30));
         styleButton(clearMapButton, false);
-        clearMapButton.addActionListener(e -> {
+        clearMapButton.addActionListener(evt -> {
             currentMap = new CampusMap();
             currentFile = null;
             mapName = "Untitled";
@@ -917,7 +962,7 @@ class UniversityCampusNavigation extends JFrame {
             layeredPane.add(resetZoomButton, JLayeredPane.PALETTE_LAYER);
             layeredPane.addComponentListener(new ComponentAdapter() {
                 @Override
-                public void componentResized(ComponentEvent evt) {
+                public void componentResized(ComponentEvent event) {
                     mapPanel.setBounds(0, 0, layeredPane.getWidth(), layeredPane.getHeight());
                     updateResetZoomButtonPosition();
                 }
@@ -946,15 +991,23 @@ class UniversityCampusNavigation extends JFrame {
             }
             getContentPane().add(layeredPane, BorderLayout.CENTER);
             getContentPane().add(controlPanel, BorderLayout.WEST);
+            cancelButton = new JButton("Cancel");
+            cancelButton.setAlignmentX(Component.CENTER_ALIGNMENT);
+            cancelButton.setMaximumSize(new Dimension(130, 30));
+            styleButton(cancelButton, false);
+            cancelButton.setVisible(false);
+            cancelButton.addActionListener(event -> {
+                mapPanel.resetModes();
+            });
             if (navigationOnly) {
                 switchToNavigationMode();
             } else {
                 switchToNavigationMode();
-                editModeButton.addActionListener(evt -> {
+                editModeButton.addActionListener(event -> {
                     System.out.println("Switching to Edit Mode");
                     switchToEditMode();
                 });
-                navigationModeButton.addActionListener(evt -> {
+                navigationModeButton.addActionListener(event -> {
                     System.out.println("Switching to Navigation Mode");
                     switchToNavigationMode();
                 });
@@ -969,7 +1022,7 @@ class UniversityCampusNavigation extends JFrame {
         saveButton.setAlignmentX(Component.CENTER_ALIGNMENT);
         saveButton.setMaximumSize(new Dimension(130, 30));
         styleButton(saveButton, false);
-        saveButton.addActionListener(e -> {
+        saveButton.addActionListener(evt -> {
             if (currentFile == null) {
                 JFileChooser fileChooser = new JFileChooser(mapDirectory);
                 fileChooser.setFileFilter(new javax.swing.filechooser.FileNameExtensionFilter("Map files (*.map)", "map"));
@@ -1006,7 +1059,7 @@ class UniversityCampusNavigation extends JFrame {
         openButton.setAlignmentX(Component.CENTER_ALIGNMENT);
         openButton.setMaximumSize(new Dimension(130, 30));
         styleButton(openButton, false);
-        openButton.addActionListener(e -> {
+        openButton.addActionListener(evt -> {
             JFileChooser fileChooser = new JFileChooser(mapDirectory);
             fileChooser.setFileFilter(new javax.swing.filechooser.FileNameExtensionFilter("Map files (*.map)", "map"));
             if (fileChooser.showOpenDialog(this) == JFileChooser.APPROVE_OPTION) {
@@ -1020,7 +1073,7 @@ class UniversityCampusNavigation extends JFrame {
         mapCombo.setBackground(new Color(255, 255, 255));
         mapCombo.setForeground(new Color(60, 64, 67));
         mapCombo.setFont(new Font("Arial", Font.PLAIN, 12));
-        mapCombo.addActionListener(e -> {
+        mapCombo.addActionListener(evt -> {
             String selectedMap = (String) mapCombo.getSelectedItem();
             if (selectedMap != null && !selectedMap.equals("Select Map")) {
                 File mapFile = new File(mapDirectory, selectedMap + ".map");
@@ -1052,7 +1105,7 @@ class UniversityCampusNavigation extends JFrame {
         findPathButton.setAlignmentX(Component.CENTER_ALIGNMENT);
         findPathButton.setMaximumSize(new Dimension(130, 30));
         styleButton(findPathButton, false);
-        findPathButton.addActionListener(e -> {
+        findPathButton.addActionListener(evt -> {
             String start = (String) startCombo.getSelectedItem();
             String end = (String) endCombo.getSelectedItem();
             if (start != null && end != null) {
@@ -1071,7 +1124,7 @@ class UniversityCampusNavigation extends JFrame {
         deleteButton.setMaximumSize(new Dimension(130, 30));
         styleButton(deleteButton, false);
         deleteButton.setEnabled(false);
-        deleteButton.addActionListener(e -> {
+        deleteButton.addActionListener(evt -> {
             Object selected = mapPanel.getSelectedObject();
             if (selected instanceof Node) {
                 Node node = (Node) selected;
@@ -1085,6 +1138,15 @@ class UniversityCampusNavigation extends JFrame {
                 mapPanel.clearSelection();
                 mapPanel.repaint();
             }
+        });
+
+        cancelButton = new JButton("Cancel");
+        cancelButton.setAlignmentX(Component.CENTER_ALIGNMENT);
+        cancelButton.setMaximumSize(new Dimension(130, 30));
+        styleButton(cancelButton, false);
+        cancelButton.setVisible(false);
+        cancelButton.addActionListener(evt -> {
+            mapPanel.resetModes();
         });
 
         if (navigationOnly) {
@@ -1116,18 +1178,60 @@ class UniversityCampusNavigation extends JFrame {
         button.setFocusPainted(false);
         button.addMouseListener(new MouseAdapter() {
             @Override
-            public void mouseEntered(MouseEvent e) {
+            public void mouseEntered(MouseEvent evt) {
                 if (!isModeButton || button.getBackground().equals(new Color(255, 255, 255))) {
                     button.setBackground(new Color(230, 230, 230));
                 }
             }
             @Override
-            public void mouseExited(MouseEvent e) {
+            public void mouseExited(MouseEvent evt) {
                 if (!isModeButton || button.getBackground().equals(new Color(230, 230, 230))) {
                     button.setBackground(new Color(255, 255, 255));
                 }
             }
         });
+    }
+
+    private void showShapeSelectionDialog(String buildingName) {
+        JDialog dialog = new JDialog(this, "Select Building Shape", true);
+        dialog.setLayout(new BorderLayout());
+        dialog.setSize(300, 150);
+        dialog.setLocationRelativeTo(this);
+
+        // Панель с текстом
+        JPanel messagePanel = new JPanel();
+        messagePanel.setBackground(new Color(245, 245, 245));
+        JLabel messageLabel = new JLabel("Select building shape:");
+        messageLabel.setFont(new Font("Arial", Font.PLAIN, 14));
+        messageLabel.setForeground(new Color(60, 64, 67));
+        messagePanel.add(messageLabel);
+        dialog.add(messagePanel, BorderLayout.NORTH);
+
+        // Панель с кнопками
+        JPanel buttonPanel = new JPanel(new FlowLayout(FlowLayout.CENTER, 10, 10));
+        buttonPanel.setBackground(new Color(245, 245, 245));
+
+        JButton rectangleButton = new JButton("Rectangle");
+        styleButton(rectangleButton, false);
+        rectangleButton.addActionListener(evt -> {
+            mapPanel.startDrawingBuilding(buildingName, "rectangle");
+            dialog.dispose();
+            JOptionPane.showMessageDialog(this, "Click and drag to draw the shape. Then edit vertices (if any) or double-click to add points. Press 'Finish Drawing' when done.");
+        });
+
+        JButton circleButton = new JButton("Circle");
+        styleButton(circleButton, false);
+        circleButton.addActionListener(evt -> {
+            mapPanel.startDrawingBuilding(buildingName, "circle");
+            dialog.dispose();
+            JOptionPane.showMessageDialog(this, "Click and drag to draw the shape. Then edit vertices (if any) or double-click to add points. Press 'Finish Drawing' when done.");
+        });
+
+        buttonPanel.add(rectangleButton);
+        buttonPanel.add(circleButton);
+        dialog.add(buttonPanel, BorderLayout.CENTER);
+
+        dialog.setVisible(true);
     }
 
     private File loadMapDirectory() {
@@ -1143,8 +1247,8 @@ class UniversityCampusNavigation extends JFrame {
                 props.load(fis);
                 mapDirPath = props.getProperty("map.directory", mapDirPath).trim();
                 System.out.println("Loaded map.directory from config: " + mapDirPath);
-            } catch (IOException e) {
-                System.out.println("Error reading config file: " + e.getMessage());
+            } catch (IOException ex) {
+                System.out.println("Error reading config file: " + ex.getMessage());
                 System.out.println("Using default directory: " + mapDirPath);
             }
         }
@@ -1215,7 +1319,7 @@ class UniversityCampusNavigation extends JFrame {
             resetZoomButton.setSize(30, 30);
             resetZoomButton.setVisible(false);
             styleButton(resetZoomButton, false);
-            resetZoomButton.addActionListener(event -> {
+            resetZoomButton.addActionListener(evt -> {
                 System.out.println("Reset Zoom button clicked");
                 mapPanel.resetZoom();
             });
@@ -1251,6 +1355,14 @@ class UniversityCampusNavigation extends JFrame {
             }
             getContentPane().add(layeredPane, BorderLayout.CENTER);
             getContentPane().add(controlPanel, BorderLayout.WEST);
+            cancelButton = new JButton("Cancel");
+            cancelButton.setAlignmentX(Component.CENTER_ALIGNMENT);
+            cancelButton.setMaximumSize(new Dimension(130, 30));
+            styleButton(cancelButton, false);
+            cancelButton.setVisible(false);
+            cancelButton.addActionListener(evt -> {
+                mapPanel.resetModes();
+            });
             if (navigationOnly) {
                 switchToNavigationMode();
             } else {
@@ -1301,12 +1413,15 @@ class UniversityCampusNavigation extends JFrame {
         controlPanel.add(findPathButton);
         controlPanel.add(Box.createRigidArea(new Dimension(0, 5)));
         controlPanel.add(deleteButton);
+        controlPanel.add(Box.createRigidArea(new Dimension(0, 5)));
+        controlPanel.add(cancelButton);
         if (!navigationOnly) {
             editModeButton.setBackground(new Color(66, 133, 244));
             editModeButton.setForeground(Color.WHITE);
             navigationModeButton.setBackground(new Color(255, 255, 255));
             navigationModeButton.setForeground(Color.BLACK);
         }
+        updateCancelButtonVisibility();
         controlPanel.revalidate();
         controlPanel.repaint();
         getContentPane().revalidate();
@@ -1367,23 +1482,14 @@ class UniversityCampusNavigation extends JFrame {
         updateResetZoomButtonPosition();
     }
 
+    public void updateCancelButtonVisibility() {
+        cancelButton.setVisible(mapPanel.isInAddMode());
+        controlPanel.revalidate();
+        controlPanel.repaint();
+    }
+
     public static void main(String[] args) {
-        Scanner scanner = new Scanner(System.in);
-        System.out.println("Select mode:");
-        System.out.println("1. Navigation Only");
-        System.out.println("2. Full Mode (with Edit Mode)");
-        System.out.print("Enter choice (1 or 2): ");
-
-        int choice;
-        try {
-            choice = scanner.nextInt();
-        } catch (Exception e) {
-            choice = 1;
-        }
-        scanner.close();
-
-        boolean navigationOnly = (choice == 1);
-
+        boolean navigationOnly = false; // По умолчанию Full Mode
         SwingUtilities.invokeLater(() -> {
             UniversityCampusNavigation app = new UniversityCampusNavigation(navigationOnly);
             app.setVisible(true);
