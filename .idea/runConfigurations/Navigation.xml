@@ -1,0 +1,11 @@
+<component name="ProjectRunConfigurationManager">
+  <configuration default="false" name="Navigation" type="Application" factoryName="Application">
+    <option name="MAIN_CLASS_NAME" value="UniversityCampusNavigation" />
+    <module name="Navigation" />
+    <option name="PROGRAM_PARAMETERS" value="$PROJECT_DIR$/../../../../libs/java/javafx-sdk-24.0.1/lib" />
+    <option name="VM_PARAMETERS" value="--module-path &quot;$PROJECT_DIR$/../../../../libs/java/javafx-sdk-24.0.1/lib&quot; --add-modules javafx.controls" />
+    <method v="2">
+      <option name="Make" enabled="true" />
+    </method>
+  </configuration>
+</component>
