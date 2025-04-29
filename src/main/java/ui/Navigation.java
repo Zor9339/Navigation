@@ -35,7 +35,7 @@ public class Navigation extends JFrame {
     private JButton clearMapButton;
     private JButton saveButton;
     private JButton openButton;
-    private JButton newMapButton; // Новая кнопка
+    private JButton newMapButton;
     private JComboBox<String> mapCombo;
     private JLabel startLabel;
     private JLabel endLabel;
@@ -46,7 +46,11 @@ public class Navigation extends JFrame {
     private final boolean navigationOnly;
     private final File mapDirectory;
 
-    // Конструктор с параметром title
+    // Процент ширины окна для controlPanel
+    private static final double CONTROL_PANEL_WIDTH_PERCENT = 0.15; // 15%
+    private static final int MIN_CONTROL_PANEL_WIDTH = 130; // Минимальная ширина в пикселях
+    private static final int CONTROL_PANEL_PADDING = 20; // Отступы (10 + 10)
+
     public Navigation(boolean navigationOnly, String title) {
         this.navigationOnly = navigationOnly;
         currentMap = new CampusMap();
@@ -74,7 +78,6 @@ public class Navigation extends JFrame {
 
         mapDirectory = FileUtil.loadMapDirectory();
 
-        // Панель для названия карты
         titlePanel = new JPanel(new FlowLayout(FlowLayout.CENTER));
         titlePanel.setBackground(new Color(230, 230, 250));
         mapNameLabel = new JLabel(mapName);
@@ -91,11 +94,21 @@ public class Navigation extends JFrame {
             switchToNavigationMode();
         }
 
+        // Добавляем слушатель изменения размеров окна после полной инициализации
+        addComponentListener(new ComponentAdapter() {
+            @Override
+            public void componentResized(ComponentEvent e) {
+                updateControlPanelWidth();
+            }
+        });
+
         pack();
         setLocationRelativeTo(null);
+
+        // Вызываем updateControlPanelWidth() после pack() и полной инициализации
+        updateControlPanelWidth();
     }
 
-    // Конструктор без параметра title (по умолчанию "Navigation")
     public Navigation(boolean navigationOnly) {
         this(navigationOnly, "Navigation");
     }
@@ -118,6 +131,7 @@ public class Navigation extends JFrame {
         resetZoomButton.addActionListener(evt -> {
             System.out.println("Reset Zoom button clicked");
             mapPanel.resetZoom();
+            updateControlPanelWidth();
         });
         layeredPane.add(resetZoomButton, JLayeredPane.PALETTE_LAYER);
         updateResetZoomButtonPosition();
@@ -140,7 +154,6 @@ public class Navigation extends JFrame {
             modePanel.add(editModeButton);
             modePanel.add(navigationModeButton);
 
-            // Панель для размещения modePanel и titlePanel
             JPanel northPanel = new JPanel(new BorderLayout());
             northPanel.setBackground(new Color(230, 230, 250));
             northPanel.add(modePanel, BorderLayout.NORTH);
@@ -158,7 +171,6 @@ public class Navigation extends JFrame {
 
         addBuildingButton = new JButton("Add Building");
         addBuildingButton.setAlignmentX(Component.CENTER_ALIGNMENT);
-        addBuildingButton.setMaximumSize(new Dimension(130, 30));
         styleButton(addBuildingButton, false);
         addBuildingButton.addActionListener(evt -> {
             String name = JOptionPane.showInputDialog(this, "Enter building name:");
@@ -169,7 +181,6 @@ public class Navigation extends JFrame {
 
         finishBuildingButton = new JButton("Finish Drawing");
         finishBuildingButton.setAlignmentX(Component.CENTER_ALIGNMENT);
-        finishBuildingButton.setMaximumSize(new Dimension(130, 30));
         styleButton(finishBuildingButton, false);
         finishBuildingButton.addActionListener(evt -> {
             mapPanel.finishDrawingBuilding();
@@ -181,7 +192,6 @@ public class Navigation extends JFrame {
 
         addRoadButton = new JButton("Add Road");
         addRoadButton.setAlignmentX(Component.CENTER_ALIGNMENT);
-        addRoadButton.setMaximumSize(new Dimension(130, 30));
         styleButton(addRoadButton, false);
         addRoadButton.addActionListener(evt -> {
             mapPanel.startDrawingRoad();
@@ -190,7 +200,6 @@ public class Navigation extends JFrame {
 
         clearMapButton = new JButton("Clear Map");
         clearMapButton.setAlignmentX(Component.CENTER_ALIGNMENT);
-        clearMapButton.setMaximumSize(new Dimension(130, 30));
         styleButton(clearMapButton, false);
         clearMapButton.addActionListener(evt -> {
             currentMap = new CampusMap();
@@ -208,12 +217,12 @@ public class Navigation extends JFrame {
             updateBuildingCombos();
             revalidate();
             repaint();
+            updateControlPanelWidth();
             JOptionPane.showMessageDialog(this, "Map cleared!");
         });
 
         saveButton = new JButton("Save");
         saveButton.setAlignmentX(Component.CENTER_ALIGNMENT);
-        saveButton.setMaximumSize(new Dimension(130, 30));
         styleButton(saveButton, false);
         saveButton.addActionListener(evt -> {
             if (currentFile == null) {
@@ -234,7 +243,7 @@ public class Navigation extends JFrame {
                         mapNameLabel.setText(mapName);
                         JOptionPane.showMessageDialog(this, "Map saved successfully!");
                         FileUtil.updateMapCombo(mapCombo, mapDirectory);
-                        updateNewMapButtonState(); // Обновляем состояние кнопки
+                        updateNewMapButtonState();
                     } catch (IOException ex) {
                         JOptionPane.showMessageDialog(this, "Error saving map!");
                     }
@@ -251,42 +260,38 @@ public class Navigation extends JFrame {
 
         openButton = new JButton("Open");
         openButton.setAlignmentX(Component.CENTER_ALIGNMENT);
-        openButton.setMaximumSize(new Dimension(130, 30));
         styleButton(openButton, false);
         openButton.addActionListener(evt -> {
             JFileChooser fileChooser = new JFileChooser(mapDirectory);
             fileChooser.setFileFilter(new javax.swing.filechooser.FileNameExtensionFilter("Map files (*.map)", "map"));
             if (fileChooser.showOpenDialog(this) == JFileChooser.APPROVE_OPTION) {
                 loadMap(fileChooser.getSelectedFile());
-                updateNewMapButtonState(); // Обновляем состояние кнопки
+                updateNewMapButtonState();
             }
         });
 
-        // Инициализация кнопки New Map
         newMapButton = new JButton("New Map");
         newMapButton.setAlignmentX(Component.CENTER_ALIGNMENT);
-        newMapButton.setMaximumSize(new Dimension(130, 30));
         styleButton(newMapButton, false);
-        newMapButton.setEnabled(false); // Изначально кнопка недоступна
+        newMapButton.setEnabled(false);
         newMapButton.addActionListener(evt -> {
-            // Сбрасываем текущую карту
             currentMap = new CampusMap();
             currentFile = null;
             mapName = "Untitled";
             mapNameLabel.setText(mapName);
-            // Обновляем UI
             getContentPane().removeAll();
             initializeUI();
             setupModeButtonListeners();
             if (navigationOnly) {
                 switchToNavigationMode();
             } else {
-                switchToEditMode(); // Остаёмся в режиме редактирования
+                switchToEditMode();
             }
             updateBuildingCombos();
             revalidate();
             repaint();
-            updateNewMapButtonState(); // Обновляем состояние кнопки
+            updateNewMapButtonState();
+            updateControlPanelWidth();
             JOptionPane.showMessageDialog(this, "New map created!");
         });
 
@@ -297,7 +302,7 @@ public class Navigation extends JFrame {
                 File mapFile = new File(mapDirectory, selectedMap + ".map");
                 System.out.println("Loading map: " + mapFile.getAbsolutePath());
                 loadMap(mapFile);
-                updateNewMapButtonState(); // Обновляем состояние кнопки
+                updateNewMapButtonState();
             }
         });
         FileUtil.updateMapCombo(mapCombo, mapDirectory);
@@ -308,7 +313,6 @@ public class Navigation extends JFrame {
         endCombo = createStyledComboBox();
         findPathButton = new JButton("Find Shortest Path");
         findPathButton.setAlignmentX(Component.CENTER_ALIGNMENT);
-        findPathButton.setMaximumSize(new Dimension(130, 30));
         styleButton(findPathButton, false);
         findPathButton.addActionListener(evt -> {
             String start = (String) startCombo.getSelectedItem();
@@ -326,7 +330,6 @@ public class Navigation extends JFrame {
 
         deleteButton = new JButton("Delete");
         deleteButton.setAlignmentX(Component.CENTER_ALIGNMENT);
-        deleteButton.setMaximumSize(new Dimension(130, 30));
         styleButton(deleteButton, false);
         deleteButton.setEnabled(false);
         deleteButton.addActionListener(evt -> {
@@ -347,7 +350,6 @@ public class Navigation extends JFrame {
 
         cancelButton = new JButton("Cancel");
         cancelButton.setAlignmentX(Component.CENTER_ALIGNMENT);
-        cancelButton.setMaximumSize(new Dimension(130, 30));
         styleButton(cancelButton, false);
         cancelButton.setVisible(false);
         cancelButton.addActionListener(evt -> {
@@ -368,7 +370,6 @@ public class Navigation extends JFrame {
         }
     }
 
-    // Метод для обновления состояния кнопки New Map
     private void updateNewMapButtonState() {
         if (newMapButton != null) {
             newMapButton.setEnabled(currentFile != null);
@@ -378,10 +379,10 @@ public class Navigation extends JFrame {
     private JComboBox<String> createStyledComboBox() {
         JComboBox<String> comboBox = new JComboBox<>();
         comboBox.setAlignmentX(Component.CENTER_ALIGNMENT);
-        comboBox.setMaximumSize(new Dimension(130, 30));
         comboBox.setBackground(new Color(255, 255, 255));
         comboBox.setForeground(new Color(60, 64, 67));
         comboBox.setFont(new Font("Arial", Font.PLAIN, 12));
+        updateComboBoxSize(comboBox);
         return comboBox;
     }
 
@@ -429,6 +430,7 @@ public class Navigation extends JFrame {
                 BorderFactory.createEmptyBorder(5, 10, 5, 10)
         ));
         button.setFocusPainted(false);
+        updateButtonSize(button);
         button.addMouseListener(new MouseAdapter() {
             @Override
             public void mouseEntered(MouseEvent evt) {
@@ -451,7 +453,6 @@ public class Navigation extends JFrame {
         dialog.setSize(300, 150);
         dialog.setLocationRelativeTo(this);
 
-        // Панель с текстом
         JPanel messagePanel = new JPanel();
         messagePanel.setBackground(new Color(245, 245, 245));
         JLabel messageLabel = new JLabel("Select building shape:");
@@ -460,7 +461,6 @@ public class Navigation extends JFrame {
         messagePanel.add(messageLabel);
         dialog.add(messagePanel, BorderLayout.NORTH);
 
-        // Панель с кнопками
         JPanel buttonPanel = new JPanel(new FlowLayout(FlowLayout.CENTER, 10, 10));
         buttonPanel.setBackground(new Color(245, 245, 245));
 
@@ -507,6 +507,7 @@ public class Navigation extends JFrame {
             updateBuildingCombos();
             revalidate();
             repaint();
+            updateControlPanelWidth();
             JOptionPane.showMessageDialog(this, "Map loaded successfully!");
         } catch (IOException | ClassNotFoundException ex) {
             JOptionPane.showMessageDialog(this, "Error loading map!");
@@ -521,10 +522,12 @@ public class Navigation extends JFrame {
         addComponentWithSpacing(controlPanel, addBuildingButton);
         addComponentWithSpacing(controlPanel, finishBuildingButton);
         addComponentWithSpacing(controlPanel, addRoadButton);
+        addComponentWithSpacing(controlPanel, finishBuildingButton);
+        addComponentWithSpacing(controlPanel, addRoadButton);
         addComponentWithSpacing(controlPanel, clearMapButton);
         addComponentWithSpacing(controlPanel, saveButton);
         addComponentWithSpacing(controlPanel, openButton);
-        addComponentWithSpacing(controlPanel, newMapButton); // Добавляем кнопку New Map
+        addComponentWithSpacing(controlPanel, newMapButton);
         addComponentWithSpacing(controlPanel, startLabel);
         addComponentWithSpacing(controlPanel, startCombo);
         addComponentWithSpacing(controlPanel, endLabel);
@@ -534,7 +537,8 @@ public class Navigation extends JFrame {
         addComponentWithSpacing(controlPanel, cancelButton);
         updateModeButtonStyles(true);
         updateCancelButtonVisibility();
-        updateNewMapButtonState(); // Обновляем состояние кнопки
+        updateNewMapButtonState();
+        updateControlPanelWidth();
         updateUI();
         System.out.println("Edit Mode: controlPanel components: " + controlPanel.getComponentCount());
     }
@@ -552,6 +556,7 @@ public class Navigation extends JFrame {
         addComponentWithSpacing(controlPanel, findPathButton);
         updateModeButtonStyles(false);
         FileUtil.updateMapCombo(mapCombo, mapDirectory);
+        updateControlPanelWidth();
         updateUI();
         System.out.println("Navigation Mode: controlPanel components: " + controlPanel.getComponentCount());
     }
@@ -572,6 +577,8 @@ public class Navigation extends JFrame {
             startCombo.addItem(buildingName);
             endCombo.addItem(buildingName);
         }
+        updateComboBoxSize(startCombo);
+        updateComboBoxSize(endCombo);
     }
 
     private void updateResetZoomButtonPosition() {
@@ -593,6 +600,7 @@ public class Navigation extends JFrame {
     public void updateCancelButtonVisibility() {
         if (cancelButton != null && mapPanel != null) {
             cancelButton.setVisible(mapPanel.isInAddMode());
+            updateButtonSize(cancelButton);
             controlPanel.revalidate();
             controlPanel.repaint();
         }
@@ -613,6 +621,61 @@ public class Navigation extends JFrame {
     public void setDeleteButtonEnabled(boolean enabled) {
         if (deleteButton != null) {
             deleteButton.setEnabled(enabled);
+        }
+    }
+
+    // Метод для пересчёта ширины controlPanel в процентах от ширины окна
+    private void updateControlPanelWidth() {
+        // Проверка на null
+        if (controlPanel == null) {
+            return;
+        }
+
+        // Получаем текущую ширину окна
+        int windowWidth = getWidth();
+        // Вычисляем ширину controlPanel как процент от ширины окна
+        int controlPanelWidth = (int) (windowWidth * CONTROL_PANEL_WIDTH_PERCENT);
+        // Убеждаемся, что ширина не меньше минимальной
+        controlPanelWidth = Math.max(controlPanelWidth, MIN_CONTROL_PANEL_WIDTH);
+
+        // Устанавливаем ширину controlPanel (учитываем отступы)
+        controlPanel.setPreferredSize(new Dimension(controlPanelWidth, 0));
+        controlPanel.setMaximumSize(new Dimension(controlPanelWidth, Integer.MAX_VALUE));
+
+        // Обновляем размеры всех кнопок и комбобоксов
+        updateButtonSize(addBuildingButton);
+        updateButtonSize(finishBuildingButton);
+        updateButtonSize(addRoadButton);
+        updateButtonSize(clearMapButton);
+        updateButtonSize(saveButton);
+        updateButtonSize(openButton);
+        updateButtonSize(newMapButton);
+        updateButtonSize(findPathButton);
+        updateButtonSize(deleteButton);
+        updateButtonSize(cancelButton);
+        updateComboBoxSize(mapCombo);
+        updateComboBoxSize(startCombo);
+        updateComboBoxSize(endCombo);
+
+        // Обновляем UI
+        updateUI();
+    }
+
+    // Метод для обновления размеров кнопок
+    private void updateButtonSize(JButton button) {
+        if (button != null && controlPanel != null) {
+            int buttonWidth = controlPanel.getPreferredSize().width - CONTROL_PANEL_PADDING;
+            button.setMaximumSize(new Dimension(buttonWidth, 30));
+            button.setPreferredSize(new Dimension(buttonWidth, 30));
+        }
+    }
+
+    // Метод для обновления размеров комбобоксов
+    private void updateComboBoxSize(JComboBox<String> comboBox) {
+        if (comboBox != null && controlPanel != null) {
+            int comboWidth = controlPanel.getPreferredSize().width - CONTROL_PANEL_PADDING;
+            comboBox.setMaximumSize(new Dimension(comboWidth, 30));
+            comboBox.setPreferredSize(new Dimension(comboWidth, 30));
         }
     }
 }

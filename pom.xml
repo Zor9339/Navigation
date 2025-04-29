@@ -46,7 +46,7 @@
                     <archive>
                         <manifest>
                             <addClasspath>true</addClasspath>
-                            <mainClass>Main</mainClass> <!-- Updated to ui.Navigation -->
+                            <mainClass>Main</mainClass>
                         </manifest>
                     </archive>
                 </configuration>
