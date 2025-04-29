@@ -47,8 +47,8 @@ public class Navigation extends JFrame {
     private final File mapDirectory;
 
     // Процент ширины окна для controlPanel
-    private static final double CONTROL_PANEL_WIDTH_PERCENT = 0.15; // 15%
-    private static final int MIN_CONTROL_PANEL_WIDTH = 130; // Минимальная ширина в пикселях
+    private static final double CONTROL_PANEL_WIDTH_PERCENT = 0.20; // Увеличили до 20%
+    private static final int MIN_CONTROL_PANEL_WIDTH = 150; // Увеличили минимальную ширину
     private static final int CONTROL_PANEL_PADDING = 20; // Отступы (10 + 10)
 
     public Navigation(boolean navigationOnly, String title) {
@@ -383,6 +383,19 @@ public class Navigation extends JFrame {
         comboBox.setForeground(new Color(60, 64, 67));
         comboBox.setFont(new Font("Arial", Font.PLAIN, 12));
         updateComboBoxSize(comboBox);
+
+        // Устанавливаем кастомный рендерер с тултипами
+        comboBox.setRenderer(new DefaultListCellRenderer() {
+            @Override
+            public Component getListCellRendererComponent(JList<?> list, Object value, int index, boolean isSelected, boolean cellHasFocus) {
+                JLabel label = (JLabel) super.getListCellRendererComponent(list, value, index, isSelected, cellHasFocus);
+                String text = value != null ? value.toString() : "";
+                label.setText(text);
+                label.setToolTipText(text); // Добавляем тултип
+                return label;
+            }
+        });
+
         return comboBox;
     }
 
@@ -522,8 +535,6 @@ public class Navigation extends JFrame {
         addComponentWithSpacing(controlPanel, addBuildingButton);
         addComponentWithSpacing(controlPanel, finishBuildingButton);
         addComponentWithSpacing(controlPanel, addRoadButton);
-        addComponentWithSpacing(controlPanel, finishBuildingButton);
-        addComponentWithSpacing(controlPanel, addRoadButton);
         addComponentWithSpacing(controlPanel, clearMapButton);
         addComponentWithSpacing(controlPanel, saveButton);
         addComponentWithSpacing(controlPanel, openButton);
@@ -577,6 +588,8 @@ public class Navigation extends JFrame {
             startCombo.addItem(buildingName);
             endCombo.addItem(buildingName);
         }
+        adjustComboBoxPopupWidth(startCombo);
+        adjustComboBoxPopupWidth(endCombo);
         updateComboBoxSize(startCombo);
         updateComboBoxSize(endCombo);
     }
@@ -654,8 +667,11 @@ public class Navigation extends JFrame {
         updateButtonSize(deleteButton);
         updateButtonSize(cancelButton);
         updateComboBoxSize(mapCombo);
+        adjustComboBoxPopupWidth(mapCombo);
         updateComboBoxSize(startCombo);
+        adjustComboBoxPopupWidth(startCombo);
         updateComboBoxSize(endCombo);
+        adjustComboBoxPopupWidth(endCombo);
 
         // Обновляем UI
         updateUI();
@@ -677,5 +693,30 @@ public class Navigation extends JFrame {
             comboBox.setMaximumSize(new Dimension(comboWidth, 30));
             comboBox.setPreferredSize(new Dimension(comboWidth, 30));
         }
+    }
+
+    // Метод для настройки ширины выпадающего списка JComboBox
+    private void adjustComboBoxPopupWidth(JComboBox<String> comboBox) {
+        if (comboBox == null || comboBox.getItemCount() == 0) {
+            return;
+        }
+
+        // Находим самый длинный элемент
+        String longestItem = "";
+        for (int i = 0; i < comboBox.getItemCount(); i++) {
+            String item = comboBox.getItemAt(i);
+            if (item != null && item.length() > longestItem.length()) {
+                longestItem = item;
+            }
+        }
+
+        // Устанавливаем прототип для вычисления ширины
+        if (!longestItem.isEmpty()) {
+            comboBox.setPrototypeDisplayValue(longestItem + "  "); // Добавляем небольшой отступ
+        }
+
+        // Обновляем UI
+        comboBox.revalidate();
+        comboBox.repaint();
     }
 }
