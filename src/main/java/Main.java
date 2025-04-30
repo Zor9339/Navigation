@@ -21,25 +21,25 @@ public class Main {
                 } else if (input.equals("no")) {
                     navigationOnly = true;
                 } else {
-                    System.out.println("Некорректный ввод. Используется значение по умолчанию: Navigation Mode");
+                    System.out.println("Incorrect input. Using default: Navigation Mode");
                 }
             } else {
-                System.out.println("Ввод пустой. Используется значение по умолчанию: Navigation Mode");
+                System.out.println("Empty input. Using default: Navigation Mode");
             }
         } catch (Exception e) {
-            System.err.println("Ошибка при чтении ввода: " + e.getMessage());
-            System.out.println("Используется значение по умолчанию: Navigation Mode");
+            System.err.println("Error while reading input: " + e.getMessage());
+            System.out.println("Using default: Navigation Mode");
         } finally {
             scanner.close();
         }
 
         // Сообщаем, в каком режиме запускается приложение
-        System.out.println("Запуск приложения в режиме: " + (navigationOnly ? "Navigation Mode" : "Edit Mode"));
+        System.out.println("Starting app in mode: " + (navigationOnly ? "Navigation Mode" : "Edit Mode"));
 
         // Запускаем приложение
         final boolean finalNavigationOnly = navigationOnly;
         SwingUtilities.invokeLater(() -> {
-            Navigation app = new Navigation(finalNavigationOnly);
+            Navigation app = new Navigation(finalNavigationOnly, null, "C:/Main/maps");
             app.setVisible(true);
         });
     }

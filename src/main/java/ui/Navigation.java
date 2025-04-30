@@ -51,12 +51,16 @@ public class Navigation extends JFrame {
     private static final int MIN_CONTROL_PANEL_WIDTH = 150; // Увеличили минимальную ширину
     private static final int CONTROL_PANEL_PADDING = 20; // Отступы (10 + 10)
 
-    public Navigation(boolean navigationOnly, String title) {
+    public Navigation(boolean navigationOnly, String title, String mapDirectoryPath) {
         this.navigationOnly = navigationOnly;
         currentMap = new CampusMap();
         currentFile = null;
         mapName = "Untitled";
-        setTitle(title);
+        if(title != null) {
+            setTitle(title);
+        } else {
+            setTitle("Navigation");
+        }
         setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
         setLayout(new BorderLayout());
         setMinimumSize(new Dimension(1000, 700));
@@ -65,18 +69,18 @@ public class Navigation extends JFrame {
         try {
             java.net.URL iconURL = getClass().getResource("/icon.png");
             if (iconURL == null) {
-                System.err.println("Ресурс /icon.png не найден в classpath.");
+                System.err.println("Resource /icon.png is not found in classpath.");
             } else {
-                System.out.println("Ресурс /icon.png найден: " + iconURL);
+                System.out.println("Resource /icon.png is found: " + iconURL);
                 ImageIcon icon = new ImageIcon(iconURL);
                 setIconImage(icon.getImage());
             }
         } catch (Exception e) {
-            System.err.println("Не удалось загрузить иконку: " + e.getMessage());
+            System.err.println("Error while loading map: " + e.getMessage());
             e.printStackTrace();
         }
 
-        mapDirectory = FileUtil.loadMapDirectory();
+        mapDirectory = FileUtil.loadMapDirectory(mapDirectoryPath);
 
         titlePanel = new JPanel(new FlowLayout(FlowLayout.CENTER));
         titlePanel.setBackground(new Color(230, 230, 250));
@@ -110,7 +114,7 @@ public class Navigation extends JFrame {
     }
 
     public Navigation(boolean navigationOnly) {
-        this(navigationOnly, "Navigation");
+        this(navigationOnly, "Navigation", null);
     }
 
     private void initializeUI() {

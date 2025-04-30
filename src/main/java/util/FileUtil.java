@@ -5,23 +5,14 @@ import java.io.*;
 import java.util.Properties;
 
 public class FileUtil {
-    public static File loadMapDirectory() {
+    public static File loadMapDirectory(String mapDirectory) {
         Properties props = new Properties();
-        File configFile = new File("config.properties");
         String mapDirPath = "./maps"; // Папка по умолчанию
 
-        if (!configFile.exists()) {
-            System.out.println("Config file 'config.properties' not found in: " + configFile.getAbsolutePath());
-            System.out.println("Using default directory: " + mapDirPath);
+        if(mapDirectory != null) {
+            mapDirPath = mapDirectory;
         } else {
-            try (FileInputStream fis = new FileInputStream(configFile)) {
-                props.load(fis);
-                mapDirPath = props.getProperty("map.directory", mapDirPath).trim();
-                System.out.println("Loaded map.directory from config: " + mapDirPath);
-            } catch (IOException ex) {
-                System.out.println("Error reading config file: " + ex.getMessage());
-                System.out.println("Using default directory: " + mapDirPath);
-            }
+            System.out.println("Using default directory: " + mapDirPath);
         }
 
         File mapDir = new File(mapDirPath);
