@@ -9,6 +9,7 @@ public class Main {
         // Создаём Scanner для чтения ввода из консоли
         Scanner scanner = new Scanner(System.in);
         boolean navigationOnly = true; // Значение по умолчанию
+        String mapDirectoryPath = "C:/Main/maps";
 
         // Запрашиваем режим у пользователя
         System.out.println("Запустить в Edit Mode? (yes/no):");
@@ -39,7 +40,7 @@ public class Main {
         // Запускаем приложение
         final boolean finalNavigationOnly = navigationOnly;
         SwingUtilities.invokeLater(() -> {
-            Navigation app = new Navigation(finalNavigationOnly, null, "C:/Main/maps");
+            Navigation app = new Navigation(finalNavigationOnly, null, mapDirectoryPath);
             app.setVisible(true);
         });
     }
