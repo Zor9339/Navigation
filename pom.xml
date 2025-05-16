@@ -19,12 +19,6 @@
     </dependencies>
 
     <build>
-        <resources>
-            <!-- Copy all files from src/main/resources to the root of target/classes -->
-            <resource>
-                <directory>resources</directory>
-            </resource>
-        </resources>
 
         <plugins>
             <!-- Maven Compiler Plugin for Java 8 -->

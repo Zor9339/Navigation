@@ -65,21 +65,6 @@ public class Navigation extends JFrame {
         setLayout(new BorderLayout());
         setMinimumSize(new Dimension(1000, 700));
 
-        // Установка иконки окна
-        try {
-            java.net.URL iconURL = getClass().getResource("/icon.png");
-            if (iconURL == null) {
-                System.err.println("Resource /icon.png is not found in classpath.");
-            } else {
-                System.out.println("Resource /icon.png is found: " + iconURL);
-                ImageIcon icon = new ImageIcon(iconURL);
-                setIconImage(icon.getImage());
-            }
-        } catch (Exception e) {
-            System.err.println("Error while loading map: " + e.getMessage());
-            e.printStackTrace();
-        }
-
         mapDirectory = FileUtil.loadMapDirectory(mapDirectoryPath);
 
         titlePanel = new JPanel(new FlowLayout(FlowLayout.CENTER));
