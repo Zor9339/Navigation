@@ -6,6 +6,8 @@ import java.io.Serializable;
 import java.util.*;
 
 public class CampusMap implements Serializable {
+    private static final long serialVersionUID = 1L;
+
     private Map<String, Node> nodes;
     private Map<String, Map<String, Edge>> graph;
     private List<Edge> edges;
@@ -75,6 +77,10 @@ public class CampusMap implements Serializable {
         updateEdgeWeights();
     }
 
+    public List<Edge> getEdges() {
+        return Collections.unmodifiableList(edges);
+    }
+
     private void updateEdgeWeights() {
         edges.sort(Comparator.comparingDouble(e -> e.length));
 
@@ -103,6 +109,11 @@ public class CampusMap implements Serializable {
     }
 
     public List<String> findShortestPath(String start, String end) {
+        // Проверка на несуществующие узлы
+        if (start == null || end == null || !graph.containsKey(start) || !graph.containsKey(end)) {
+            return Collections.emptyList();
+        }
+
         Map<String, Integer> distances = new HashMap<>();
         Map<String, String> previous = new HashMap<>();
         PriorityQueue<String> queue = new PriorityQueue<>(Comparator.comparingInt(distances::get));

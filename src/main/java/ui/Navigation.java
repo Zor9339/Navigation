@@ -512,6 +512,7 @@ public class Navigation extends JFrame {
             updateControlPanelWidth();
             JOptionPane.showMessageDialog(this, "Map loaded successfully!");
         } catch (IOException | ClassNotFoundException ex) {
+            System.out.println(ex);
             JOptionPane.showMessageDialog(this, "Error loading map!");
         }
     }
