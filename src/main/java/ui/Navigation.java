@@ -47,8 +47,8 @@ public class Navigation extends JFrame {
     private final File mapDirectory;
 
     // Процент ширины окна для controlPanel
-    private static final double CONTROL_PANEL_WIDTH_PERCENT = 0.20; // Увеличили до 20%
-    private static final int MIN_CONTROL_PANEL_WIDTH = 150; // Увеличили минимальную ширину
+    private static final double CONTROL_PANEL_WIDTH_PERCENT = 0.20;
+    private static final int MIN_CONTROL_PANEL_WIDTH = 150;
     private static final int CONTROL_PANEL_PADDING = 20; // Отступы (10 + 10)
 
     public Navigation(boolean navigationOnly, String title, String mapDirectoryPath) {
