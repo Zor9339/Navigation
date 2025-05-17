@@ -12,6 +12,6 @@ public class Edge implements Serializable {
         this.from = from;
         this.to = to;
         this.length = length;
-        this.weight = 0; // Инициализируется позже
+        this.weight = 0;
     }
 }

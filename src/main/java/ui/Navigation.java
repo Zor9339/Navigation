@@ -46,10 +46,9 @@ public class Navigation extends JFrame {
     private final boolean navigationOnly;
     private final File mapDirectory;
 
-    // Процент ширины окна для controlPanel
     private static final double CONTROL_PANEL_WIDTH_PERCENT = 0.20;
     private static final int MIN_CONTROL_PANEL_WIDTH = 150;
-    private static final int CONTROL_PANEL_PADDING = 20; // Отступы (10 + 10)
+    private static final int CONTROL_PANEL_PADDING = 20;
 
     public Navigation(boolean navigationOnly, String title, String mapDirectoryPath) {
         this.navigationOnly = navigationOnly;
@@ -83,7 +82,6 @@ public class Navigation extends JFrame {
             switchToNavigationMode();
         }
 
-        // Добавляем слушатель изменения размеров окна после полной инициализации
         addComponentListener(new ComponentAdapter() {
             @Override
             public void componentResized(ComponentEvent e) {
@@ -94,7 +92,6 @@ public class Navigation extends JFrame {
         pack();
         setLocationRelativeTo(null);
 
-        // Вызываем updateControlPanelWidth() после pack() и полной инициализации
         updateControlPanelWidth();
     }
 
@@ -373,14 +370,13 @@ public class Navigation extends JFrame {
         comboBox.setFont(new Font("Arial", Font.PLAIN, 12));
         updateComboBoxSize(comboBox);
 
-        // Устанавливаем кастомный рендерер с тултипами
         comboBox.setRenderer(new DefaultListCellRenderer() {
             @Override
             public Component getListCellRendererComponent(JList<?> list, Object value, int index, boolean isSelected, boolean cellHasFocus) {
                 JLabel label = (JLabel) super.getListCellRendererComponent(list, value, index, isSelected, cellHasFocus);
                 String text = value != null ? value.toString() : "";
                 label.setText(text);
-                label.setToolTipText(text); // Добавляем тултип
+                label.setToolTipText(text);
                 return label;
             }
         });
@@ -626,25 +622,21 @@ public class Navigation extends JFrame {
         }
     }
 
-    // Метод для пересчёта ширины controlPanel в процентах от ширины окна
     private void updateControlPanelWidth() {
-        // Проверка на null
+
         if (controlPanel == null) {
             return;
         }
 
-        // Получаем текущую ширину окна
         int windowWidth = getWidth();
-        // Вычисляем ширину controlPanel как процент от ширины окна
+
         int controlPanelWidth = (int) (windowWidth * CONTROL_PANEL_WIDTH_PERCENT);
-        // Убеждаемся, что ширина не меньше минимальной
+
         controlPanelWidth = Math.max(controlPanelWidth, MIN_CONTROL_PANEL_WIDTH);
 
-        // Устанавливаем ширину controlPanel (учитываем отступы)
         controlPanel.setPreferredSize(new Dimension(controlPanelWidth, 0));
         controlPanel.setMaximumSize(new Dimension(controlPanelWidth, Integer.MAX_VALUE));
 
-        // Обновляем размеры всех кнопок и комбобоксов
         updateButtonSize(addBuildingButton);
         updateButtonSize(finishBuildingButton);
         updateButtonSize(addRoadButton);
@@ -662,11 +654,9 @@ public class Navigation extends JFrame {
         updateComboBoxSize(endCombo);
         adjustComboBoxPopupWidth(endCombo);
 
-        // Обновляем UI
         updateUI();
     }
 
-    // Метод для обновления размеров кнопок
     private void updateButtonSize(JButton button) {
         if (button != null && controlPanel != null) {
             int buttonWidth = controlPanel.getPreferredSize().width - CONTROL_PANEL_PADDING;
@@ -675,7 +665,6 @@ public class Navigation extends JFrame {
         }
     }
 
-    // Метод для обновления размеров комбобоксов
     private void updateComboBoxSize(JComboBox<String> comboBox) {
         if (comboBox != null && controlPanel != null) {
             int comboWidth = controlPanel.getPreferredSize().width - CONTROL_PANEL_PADDING;
@@ -684,13 +673,11 @@ public class Navigation extends JFrame {
         }
     }
 
-    // Метод для настройки ширины выпадающего списка JComboBox
     private void adjustComboBoxPopupWidth(JComboBox<String> comboBox) {
         if (comboBox == null || comboBox.getItemCount() == 0) {
             return;
         }
 
-        // Находим самый длинный элемент
         String longestItem = "";
         for (int i = 0; i < comboBox.getItemCount(); i++) {
             String item = comboBox.getItemAt(i);
@@ -699,12 +686,10 @@ public class Navigation extends JFrame {
             }
         }
 
-        // Устанавливаем прототип для вычисления ширины
         if (!longestItem.isEmpty()) {
-            comboBox.setPrototypeDisplayValue(longestItem + "  "); // Добавляем небольшой отступ
+            comboBox.setPrototypeDisplayValue(longestItem + "  ");
         }
 
-        // Обновляем UI
         comboBox.revalidate();
         comboBox.repaint();
     }

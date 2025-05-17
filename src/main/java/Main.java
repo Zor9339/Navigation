@@ -6,12 +6,10 @@ import java.util.Scanner;
 
 public class Main {
     public static void main(String[] args) {
-        // Создаём Scanner для чтения ввода из консоли
         Scanner scanner = new Scanner(System.in);
-        boolean navigationOnly = true; // Значение по умолчанию
+        boolean navigationOnly = true;
         String mapDirectoryPath = "C:/Main/maps";
 
-        // Запрашиваем режим у пользователя
         System.out.println("Запустить в Edit Mode? (yes/no):");
 
         try {
@@ -34,10 +32,8 @@ public class Main {
             scanner.close();
         }
 
-        // Сообщаем, в каком режиме запускается приложение
         System.out.println("Starting app in mode: " + (navigationOnly ? "Navigation Mode" : "Edit Mode"));
 
-        // Запускаем приложение
         final boolean finalNavigationOnly = navigationOnly;
         SwingUtilities.invokeLater(() -> {
             Navigation app = new Navigation(finalNavigationOnly, null, mapDirectoryPath);

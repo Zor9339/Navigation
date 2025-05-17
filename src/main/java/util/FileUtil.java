@@ -7,7 +7,7 @@ import java.util.Properties;
 public class FileUtil {
     public static File loadMapDirectory(String mapDirectory) {
         Properties props = new Properties();
-        String mapDirPath = "./maps"; // Папка по умолчанию
+        String mapDirPath = "./maps";
 
         if(mapDirectory != null) {
             mapDirPath = mapDirectory;

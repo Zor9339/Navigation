@@ -7,8 +7,8 @@ import java.io.Serializable;
 public class Node implements Serializable {
     String id;
     Point position;
-    Polygon shape; // null для точек преломления
-    Point connectionPoint; // null для точек преломления
+    Polygon shape;
+    Point connectionPoint;
 
     public Node(String id, Point position, Polygon shape, Point connectionPoint) {
         this.id = id;
@@ -21,7 +21,6 @@ public class Node implements Serializable {
         return shape != null;
     }
 
-    // Геттеры для полей
     public String getId() {
         return id;
     }

@@ -42,7 +42,7 @@ public class MapPanel extends JPanel {
         this.isEditMode = true;
         resetModes();
         setPreferredSize(new Dimension(800, 600));
-        setBackground(new Color(245, 245, 245)); // Светлый фон
+        setBackground(new Color(245, 245, 245));
 
         MouseAdapter mouseAdapter = new MouseAdapter() {
             @Override
@@ -226,7 +226,7 @@ public class MapPanel extends JPanel {
         });
     }
 
-    private Point getScaledPoint(Point p) {
+    public Point getScaledPoint(Point p) {
         double x = (p.x - translateX) / scale;
         double y = (p.y - translateY) / scale;
         return new Point((int) x, (int) y);
@@ -351,7 +351,7 @@ public class MapPanel extends JPanel {
 
     private Polygon approximateCircle(Point center, int radius) {
         Polygon circle = new Polygon();
-        int numPoints = 32; // Количество точек для аппроксимации окружности
+        int numPoints = 32;
         for (int i = 0; i < numPoints; i++) {
             double angle = 2 * Math.PI * i / numPoints;
             int x = center.x + (int) (radius * Math.cos(angle));
@@ -448,7 +448,7 @@ public class MapPanel extends JPanel {
         g2d.scale(scale, scale);
 
         // Отрисовка дорог
-        g2d.setColor(new Color(200, 200, 200)); // Серый, как на фото
+        g2d.setColor(new Color(200, 200, 200));
         Set<String> drawnEdges = new HashSet<>();
         for (String from : map.getGraph().keySet()) {
             for (Map.Entry<String, Edge> neighbor : map.getGraph().get(from).entrySet()) {
@@ -458,11 +458,11 @@ public class MapPanel extends JPanel {
                     Point fromPos = map.getNodes().get(from).getPosition();
                     Point toPos = map.getNodes().get(to).getPosition();
                     if (isEditMode && selectedObject instanceof Edge && selectedObject == neighbor.getValue()) {
-                        g2d.setColor(new Color(255, 165, 0)); // Оранжевый для выделения
-                        g2d.setStroke(new BasicStroke((float) (6 / scale))); // Увеличим толщину для выделения
+                        g2d.setColor(new Color(255, 165, 0));
+                        g2d.setStroke(new BasicStroke((float) (6 / scale)));
                     } else {
                         g2d.setColor(new Color(200, 200, 200));
-                        g2d.setStroke(new BasicStroke((float) (4 / scale))); // Увеличиваем толщину дорог
+                        g2d.setStroke(new BasicStroke((float) (4 / scale)));
                     }
                     g2d.drawLine(fromPos.x, fromPos.y, toPos.x, toPos.y);
                     drawnEdges.add(edgeKey);
@@ -473,8 +473,8 @@ public class MapPanel extends JPanel {
 
         // Отрисовка временной дороги
         if (isEditMode && drawingRoad && !tempRoadPoints.isEmpty()) {
-            g2d.setColor(new Color(200, 200, 200)); // Светло-серый
-            g2d.setStroke(new BasicStroke((float) (4 / scale))); // Такая же толщина, как у дорог
+            g2d.setColor(new Color(200, 200, 200));
+            g2d.setStroke(new BasicStroke((float) (4 / scale)));
             Path2D road = new Path2D.Double();
             road.moveTo(tempRoadPoints.get(0).x, tempRoadPoints.get(0).y);
             for (int i = 1; i < tempRoadPoints.size(); i++) {
@@ -486,7 +486,7 @@ public class MapPanel extends JPanel {
 
         // Отрисовка пути
         if (!currentPath.isEmpty()) {
-            g2d.setColor(new Color(66, 133, 244)); // Синий, как в Google Maps
+            g2d.setColor(new Color(66, 133, 244));
             g2d.setStroke(new BasicStroke((float) (3 / scale)));
             for (int i = 0; i < currentPath.size() - 1; i++) {
                 String from = currentPath.get(i);
@@ -501,35 +501,31 @@ public class MapPanel extends JPanel {
         // Отрисовка зданий и точек
         for (Node node : map.getNodes().values()) {
             if (node.isBuilding()) {
-                // Здание
-                g2d.setColor(new Color(100, 149, 237, 180)); // Полупрозрачный синий
+                g2d.setColor(new Color(100, 149, 237, 180));
                 g2d.fillPolygon(node.getShape());
-                g2d.setColor(new Color(25, 25, 112)); // Тёмно-синий контур
+                g2d.setColor(new Color(25, 25, 112));
                 g2d.setStroke(new BasicStroke((float) (1.5 / scale)));
                 g2d.drawPolygon(node.getShape());
                 if (isEditMode && selectedObject == node) {
-                    g2d.setColor(new Color(255, 165, 0)); // Оранжевый для выделения
+                    g2d.setColor(new Color(255, 165, 0));
                     g2d.setStroke(new BasicStroke((float) (4 / scale)));
                     g2d.drawPolygon(node.getShape());
                     g2d.drawOval(node.getConnectionPoint().x - (int) (7 / scale), node.getConnectionPoint().y - (int) (7 / scale), (int) (14 / scale), (int) (14 / scale));
                     g2d.setStroke(new BasicStroke((float) (1 / scale)));
                 }
-                // Точка входа (Google Maps стиль)
-                g2d.setColor(new Color(34, 139, 34)); // Зелёный круг
+                g2d.setColor(new Color(34, 139, 34));
                 g2d.fillOval(node.getConnectionPoint().x - (int) (5 / scale), node.getConnectionPoint().y - (int) (5 / scale), (int) (10 / scale), (int) (10 / scale));
-                g2d.setColor(Color.WHITE); // Белая точка
+                g2d.setColor(Color.WHITE);
                 g2d.fillOval(node.getConnectionPoint().x - (int) (2 / scale), node.getConnectionPoint().y - (int) (2 / scale), (int) (4 / scale), (int) (4 / scale));
-                // Название здания (только чёрный шрифт)
                 g2d.setColor(Color.BLACK);
                 g2d.setFont(new Font("Arial", Font.PLAIN, (int) (12 / scale)));
                 Rectangle bounds = node.getShape().getBounds();
                 g2d.drawString(node.getId().substring(2), bounds.x + bounds.width + 5, bounds.y + bounds.height / 2);
             } else {
-                // Junction
-                g2d.setColor(new Color(180, 180, 180)); // Чуть темнее, чем дороги
+                g2d.setColor(new Color(180, 180, 180));
                 g2d.fillOval(node.getPosition().x - (int) (5 / scale), node.getPosition().y - (int) (5 / scale), (int) (10 / scale), (int) (10 / scale));
                 if (isEditMode && selectedObject == node) {
-                    g2d.setColor(new Color(255, 165, 0)); // Оранжевый для выделения
+                    g2d.setColor(new Color(255, 165, 0));
                     g2d.setStroke(new BasicStroke((float) (4 / scale)));
                     g2d.drawOval(node.getPosition().x - (int) (7 / scale), node.getPosition().y - (int) (7 / scale), (int) (14 / scale), (int) (14 / scale));
                     g2d.setStroke(new BasicStroke((float) (1 / scale)));

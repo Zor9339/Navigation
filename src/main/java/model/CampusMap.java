@@ -109,7 +109,6 @@ public class CampusMap implements Serializable {
     }
 
     public List<String> findShortestPath(String start, String end) {
-        // Проверка на несуществующие узлы
         if (start == null || end == null || !graph.containsKey(start) || !graph.containsKey(end)) {
             return Collections.emptyList();
         }
